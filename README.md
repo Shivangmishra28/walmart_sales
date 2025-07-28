@@ -1,9 +1,6 @@
 # walmart_sales
 ## Project Overview
 
-![Project Pipeline](https://github.com/najirh/Walmart_SQL_Python/blob/main/walmart_project-piplelines.png)
-
-
 This project is an end-to-end data analysis solution designed to extract critical business insights from Walmart sales data. We utilize Python for data processing and analysis, SQL for advanced querying, and structured problem-solving techniques to solve key business questions. The project is ideal for data analysts looking to develop skills in data manipulation, SQL querying, and data pipeline creation.
 
 ---
@@ -54,6 +51,7 @@ This project is an end-to-end data analysis solution designed to extract critica
 
 ### 9. SQL Analysis: Complex Queries and Business Problem Solving
    - **Business Problem-Solving**: Write and execute complex SQL queries to answer critical business questions, such as:
+     - Revenue trends across branches and categories.
 ```sql
 select * from
 (
@@ -66,11 +64,52 @@ Group by 1,2
 ) as tb1
 where Rank_d = 1;
 ```
-     - Revenue trends across branches and categories.
      - Identifying best-selling product categories.
+```sql
+select * from
+(
+Select branch,
+    category,
+    avg(rating) as avg_rating,
+    RANK() OVER(partition by branch Order by avg(rating) desc) as Rank_d
+from walmart
+Group by 1,2
+) as tb1
+where Rank_d = 1;
+```
      - Sales performance by time, city, and payment method.
+```sql
+Select * from
+(
+SELECT 
+	branch,
+    date_format(date, '%Y-%m-%d') as day_name,
+    COUNT(*) as no_transaction,
+    RANK() OVER(PARTITION BY branch order by COUNT(*) desc) as rank_d
+from walmart
+group by 1,2
+) as t
+where rank_d = 1;
+```
      - Analyzing peak sales periods and customer buying patterns.
+```sql
+SELECT 
+	payment_method,
+    --COUNT(*) as no_payments,
+    SUM(quantity) as no_qty_sold
+from walmart
+Group by payment_method;
+```
      - Profit margin analysis by branch and category.
+```sql
+SELECT
+	category,
+    SUM(total) as total_revenue,
+    SUM(total * profit_margin) as profit
+from walmart
+Group by 1;
+```
+
    - **Documentation**: Keep clear notes of each query's objective, approach, and results.
 
 ### 10. Project Publishing and Documentation

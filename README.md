@@ -1,27 +1,45 @@
-# walmart_sales
+# walmart_sales_mysql
 ## Project Overview
 
-This project is an end-to-end data analysis solution designed to extract critical business insights from Walmart sales data. We utilize Python for data processing and analysis, SQL for advanced querying, and structured problem-solving techniques to solve key business questions.
+This project is an end-to-end SQL analysis solution designed to extract key business insights from Walmart sales data using **MySQL**. The objective is to perform structured querying, business problem-solving, and data summarization using SQL techniques like aggregation, window functions, filtering, and joins. 
 
 ---
 
 ## Project Steps
 
 ### 1. Set Up the Environment
-   - **Tools Used**: Visual Studio Code (VS Code), Python, SQL (MySQL and PostgreSQL)
-   - **Goal**: Create a structured workspace within VS Code and organize project folders for smooth development and data handling.
+- **Tools Used**: Visual Studio Code (VS Code), MySQL Workbench, MySQL CLI
+- **Goal**: Create a structured SQL-based data analysis solution that can be version-controlled on GitHub.
 
-### 2. Set Up Kaggle API
-   - **API Setup**: Obtain your Kaggle API token from [Kaggle](https://www.kaggle.com/) by navigating to your profile settings and downloading the JSON file.
-   - **Configure Kaggle**: 
-      - Place the downloaded `kaggle.json` file in your local `.kaggle` folder.
-      - Use the command `kaggle datasets download -d <dataset-path>` to pull datasets directly into your project.
+### 2. Get the Dataset
+- **Data Source**: [Walmart Sales Dataset on Kaggle](https://www.kaggle.com/najir0123/walmart-10k-sales-datasets)
+- **Storage**: Save the CSV file into the `data/` folder.
 
-### 3. Download Walmart Sales Data
-   - **Data Source**: Use the Kaggle API to download the Walmart sales datasets from Kaggle.
-   - **Dataset Link**: [Walmart Sales Dataset](https://www.kaggle.com/najir0123/walmart-10k-sales-datasets)
-   - **Storage**: Save the data in the `data/` folder for easy reference and access.
-
+### 3. Create the Table in MySQL
+- Create a table structure in MySQL to match the dataset:
+```sql
+CREATE TABLE walmart (
+    invoice_id VARCHAR(20),
+    branch VARCHAR(10),
+    city VARCHAR(50),
+    customer_type VARCHAR(50),
+    gender VARCHAR(10),
+    product_line VARCHAR(100),
+    unit_price FLOAT,
+    quantity INT,
+    tax FLOAT,
+    total FLOAT,
+    date DATE,
+    time TIME,
+    payment_method VARCHAR(20),
+    cogs FLOAT,
+    gross_margin_pct FLOAT,
+    gross_income FLOAT,
+    rating FLOAT,
+    category VARCHAR(50),
+    profit_margin FLOAT
+);
+```
 ### 4. Install Required Libraries and Load Data
    - **Libraries**: Install necessary Python libraries using:
      ```bash
@@ -50,65 +68,145 @@ This project is an end-to-end data analysis solution designed to extract critica
    - **Verification**: Run initial SQL queries to confirm that the data has been loaded accurately.
 
 ### 9. SQL Analysis: Complex Queries and Business Problem Solving
-   - **Business Problem-Solving**: Write and execute complex SQL queries to answer critical business questions, such as:
-     - Revenue trends across branches and categories.
-```sql
-select * from
-(
-Select branch,
-    category,
-    avg(rating) as avg_rating,
-    RANK() OVER(partition by branch Order by avg(rating) desc) as Rank_d
-from walmart
-Group by 1,2
-) as tb1
-where Rank_d = 1;
+   - **Business Problem-Solving**: Write and execute complex SQL queries to answer critical business questions, such as
+-- walmart_sales_project.sql
+
+-- Q1: Find different payment methods and number of transactions, number of qty sold
 ```
-     - Identifying best-selling product categories.
-```sql
-select * from
-(
-Select branch,
-    category,
-    avg(rating) as avg_rating,
-    RANK() OVER(partition by branch Order by avg(rating) desc) as Rank_d
-from walmart
-Group by 1,2
-) as tb1
-where Rank_d = 1;
-```
-     - Sales performance by time, city, and payment method.
-```sql
-Select * from
-(
-SELECT 
-	branch,
-    date_format(date, '%Y-%m-%d') as day_name,
-    COUNT(*) as no_transaction,
-    RANK() OVER(PARTITION BY branch order by COUNT(*) desc) as rank_d
-from walmart
-group by 1,2
-) as t
-where rank_d = 1;
-```
-     - Analyzing peak sales periods and customer buying patterns.
-```sql
-SELECT 
-	payment_method,
-    --COUNT(*) as no_payments,
-    SUM(quantity) as no_qty_sold
-from walmart
-Group by payment_method;
-```
-     - Profit margin analysis by branch and category.
-```sql
 SELECT
-	category,
-    SUM(total) as total_revenue,
-    SUM(total * profit_margin) as profit
-from walmart
-Group by 1;
+  payment_method,
+  COUNT(*) AS no_payment,
+  SUM(quantity) AS no_qty_sold
+FROM walmart
+GROUP BY payment_method;
 ```
+-- Q2: Identify the highest rated category in each branch, displaying branch, category, and average rating
+```
+SELECT * FROM (
+  SELECT 
+    branch,
+    category,
+    AVG(rating) AS avg_rating,
+    RANK() OVER (PARTITION BY branch ORDER BY AVG(rating) DESC) AS rank_d
+  FROM walmart
+  GROUP BY branch, category
+) AS tb1
+WHERE rank_d = 1;
+
+```
+
+-- Q3: Identify the busiest day for each branch based on number of transactions
+
+```
+SELECT * FROM (
+  SELECT 
+    branch,
+    DATE_FORMAT(date, '%Y-%m-%d') AS day_name,
+    COUNT(*) AS no_transaction,
+    RANK() OVER (PARTITION BY branch ORDER BY COUNT(*) DESC) AS rank_d
+  FROM walmart
+  GROUP BY branch, DATE_FORMAT(date, '%Y-%m-%d')
+) AS 
+WHERE rank_d = 1;
+```
+
+-- Q4: Calculate total quantity of items sold per payment method
+
+```
+SELECT 
+  payment_method,
+  SUM(quantity) AS no_qty_sold
+FROM walmart
+GROUP BY payment_method;
+```
+
+-- Q5: Determine the average, minimum, and maximum rating of categories for each city
+SELECT 
+```
+  city,
+  category,
+  MIN(rating) AS min_rating,
+  MAX(rating) AS max_rating,
+  AVG(rating) AS avg_rating
+FROM walmart
+GROUP BY city, category;
+```
+
+-- Q6: Calculate total profit for each category
+-- total_profit = unit_price * quantity * profit_margin
+```
+SELECT
+  category,
+  SUM(total) AS total_revenue,
+  SUM(total * profit_margin) AS profit
+FROM walmart
+GROUP BY category;
+```
+
+-- Q7: Determine the most common payment method for each Branch
+
+```
+WITH cte AS (
+  SELECT
+    branch,
+    payment_method,
+    COUNT(*) AS total_trans
+  FROM walmart
+  GROUP BY branch, payment_method
+),
+ranked AS (
+  SELECT *,
+    RANK() OVER (PARTITION BY branch ORDER BY total_trans DESC) AS rank1
+  FROM cte
+)
+SELECT *
+FROM ranked
+WHERE rank1 = 1;
+```
+
+-- Q8: Categorize sales by shift (Morning, Afternoon, Evening) and find number of invoices per shift
+```
+SELECT 
+  branch,
+  CASE
+    WHEN HOUR(TIME(time)) < 12 THEN 'Morning'
+    WHEN HOUR(TIME(time)) BETWEEN 12 AND 17 THEN 'Afternoon'
+    ELSE 'Evening'
+  END AS day_time,
+  COUNT(*) AS invoice_count
+FROM walmart
+GROUP BY branch, day_time;
+```
+
+-- Q9: Identify top 5 branches with highest decrease in revenue from 2022 to 2023
+-- (last_rev - curr_rev)/last_rev * 100
+```
+WITH revenue_2022 AS (
+  SELECT branch, SUM(total) AS rev_2022
+  FROM walmart
+  WHERE YEAR(STR_TO_DATE(date, '%d/%m/%y')) = 2022
+  GROUP BY branch
+),
+revenue_2023 AS (
+  SELECT branch, SUM(total) AS rev_2023
+  FROM walmart
+  WHERE YEAR(STR_TO_DATE(date, '%d/%m/%y')) = 2023
+  GROUP BY branch
+),
+combined AS (
+  SELECT 
+    r22.branch,
+    r22.rev_2022,
+    r23.rev_2023,
+    ((r22.rev_2022 - r23.rev_2023) / r22.rev_2022) * 100 AS drop_ratio
+  FROM revenue_2022 r22
+  JOIN revenue_2023 r23 ON r22.branch = r23.branch
+)
+SELECT * FROM combined
+ORDER BY drop_ratio DESC
+LIMIT 5;
+```
+
 
    - **Documentation**: Keep clear notes of each query's objective, approach, and results.
 
@@ -184,3 +282,5 @@ This project is licensed under the MIT License.
 - **Inspiration**: Walmart’s business case studies on sales and supply chain optimization.
 
 ---
+
+
